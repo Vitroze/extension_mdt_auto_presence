@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "RHS - AutoPresence MDT",
+  "version": "1.0.0",
+  "description": "Remplis automatiquement la section 'Présence' lorsqu'il a des RHS du MDT.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "mdt-auto-presence-extension@local",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://mdt.gtacityrp.fr/*"],
+      "js": ["script.js"]
+    }
+  ]
+}
