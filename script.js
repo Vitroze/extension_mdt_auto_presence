@@ -238,7 +238,7 @@ function injectButton() {
     const btn = document.createElement("button");
     btn.id = "auto-fill-presence";
     btn.type = "button";
-    btn.textContent = "Remplir automatiquement";
+    btn.textContent = `Remplir automatiquement (du ${fmt(getCurrentWeekDates()[0])} au ${fmt(getCurrentWeekDates()[6])})`;
     btn.style.cssText =
         "margin:8px 0;padding:6px 12px;border:0;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;";
     btn.addEventListener("click", () => fillPresence(btn));
