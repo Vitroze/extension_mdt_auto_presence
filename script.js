@@ -137,7 +137,7 @@ async function getDeputyWeeklyStats(firstName, lastName) {
     }
 }
 
-const PRESENCE_VALID = { // Si inférieur à 1h, on considère que le policier n'était pas présent, sinon si inférieur à 2h, on considère qu'il était présent mais pas toute la journée, sinon il était présent toute la journée.
+const PRESENCE_VALID = {
     CORRECT: 6 * 60 * 60 * 1000, // 2h en ms
     MOYEN: 3 * 60 * 60 * 1000, // 1h en ms
     BAD: 1 * 60 * 1000, // 30min en ms
@@ -247,27 +247,3 @@ function injectButton() {
 
 new MutationObserver(injectButton).observe(document.body, { childList: true, subtree: true });
 injectButton();
-
-(async () => {
-    try {
-        const idSection = await getIDSection();
-        if (idSection === -1) {
-            console.error("Could not determine section ID.");
-            return;
-        }
-        const section = await fetchSection(idSection);
-        const deputies = getDeputies(section);
-
-        for (const deputy of deputies) {
-            const stats = await getDeputyWeeklyStats(deputy.firstName, deputy.lastName);
-            const presenceStatus = getPresenceStatus(stats.totalMs);
-            console.log(`Weekly stats for ${deputy.firstName} ${deputy.lastName}: `, {
-                totalMs: stats.totalMs,
-                daysPresent: stats.daysPresent,
-                presenceStatus: deputy.is_absent ? "ABSENT" : presenceStatus,
-            });
-        }
-    } catch (error) {
-        console.error("Error fetching section: ", error);
-    }
-})();
