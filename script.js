@@ -161,6 +161,93 @@ function isWriteRHS() {
     return h3 ? h3.textContent.trim().toLowerCase() == "période du rapport" : false;
 }
 
+const STATUS_TO_TITLE = {
+    CORRECT: "CORRECTE",
+    MOYENNE: "MOYENNE",
+    MAUVAISE: "MAUVAISE",
+    INEXISTANT: "INEXISTANTE",
+    ABSENT: "ABSENCE JUSTIFIÉE",
+};
+
+const norm = (s) =>
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
+
+function getRows() {
+    const rows = new Map();
+    document.querySelectorAll('button[title="CORRECTE"]').forEach((btn) => {
+        const row = btn.parentElement.parentElement;
+        const name = row.querySelector("span")?.textContent;
+        if (name) rows.set(norm(name), row);
+    });
+    return rows;
+}
+
+function findRow(rows, firstName, lastName) {
+    const full = norm(`${firstName} ${lastName}`);
+    if (rows.has(full)) return rows.get(full);
+    const f = norm(firstName), l = norm(lastName);
+    for (const [name, row] of rows) {
+        if (name.startsWith(f) && name.endsWith(l)) return row;
+    }
+    return null;
+}
+
+function clickStatus(row, status) {
+    row.querySelector(`button[title="${STATUS_TO_TITLE[status]}"]`)?.click();
+}
+
+async function fillPresence(btn) {
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = "Remplissage...";
+    try {
+        const idSection = await getIDSection();
+        if (idSection === -1) throw new Error("Section introuvable");
+
+        const deputies = getDeputies(await fetchSection(idSection));
+        const rows = getRows();
+
+        for (const d of deputies) {
+            const stats = await getDeputyWeeklyStats(d.firstName, d.lastName);
+            const status = d.is_absent ? "ABSENT" : getPresenceStatus(stats.totalMs);
+            const row = findRow(rows, d.firstName, d.lastName);
+            if (!row) {
+                console.warn(`Ligne introuvable : ${d.firstName} ${d.lastName}`);
+                continue;
+            }
+            clickStatus(row, status);
+            console.log(`${d.firstName} ${d.lastName} → ${status} (${formatTime(stats.totalMs)})`);
+        }
+        btn.textContent = "Terminé ✔";
+    } catch (e) {
+        console.error("Erreur :", e);
+        btn.textContent = "Erreur (voir console)";
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => (btn.textContent = label), 3000);
+    }
+}
+
+function injectButton() {
+    const h3 = [...document.querySelectorAll("h3")].find(
+        (h) => h.textContent.trim() === "Présence des adjoints"
+    );
+    if (!h3 || document.getElementById("auto-fill-presence")) return;
+
+    const btn = document.createElement("button");
+    btn.id = "auto-fill-presence";
+    btn.type = "button";
+    btn.textContent = "Remplir automatiquement";
+    btn.style.cssText =
+        "margin:8px 0;padding:6px 12px;border:0;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;";
+    btn.addEventListener("click", () => fillPresence(btn));
+    h3.after(btn);
+}
+
+new MutationObserver(injectButton).observe(document.body, { childList: true, subtree: true });
+injectButton();
+
 (async () => {
     try {
         const idSection = await getIDSection();
