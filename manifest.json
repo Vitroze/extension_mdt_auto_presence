@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "RHS - AutoPresence MDT",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Remplis automatiquement la section 'Présence' lorsqu'il a des RHS du MDT.",
   "browser_specific_settings": {
     "gecko": {

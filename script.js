@@ -1,4 +1,3 @@
-
 const URL_API = "https://mdt.gtacityrp.fr/api/hr/department-sections";
 const AUTHORIZATION_TOKEN = "Bearer eyJzdGVhbUlkIjoiNzY1NjExOTgzODkxMjM3NzYiLCJ0aW1lc3RhbXAiOjE3OTMxNTEzNzgyODUsImhhc2giOiIzYjkxODZmYWY3MzgzNzU5N2ZkM2I2ZTE5NDY3ZDJiMGI1MjFkYmRlMjVlOWMwZGEzY2VhN2ZmMDUxYjU2YjEwIn0=";
 
@@ -24,8 +23,6 @@ async function getIDSection() {
     }
 
     const data = await response.json();
-    console.log("Fetched section data: ", data);
-    console.log("Section letter: ", data.letter);
     return data && data.letter ? LETTERS.indexOf(data.letter.toUpperCase()) : -1;
 }
 
@@ -54,29 +51,37 @@ function getDeputies(section) {
         return [];
     }
 
-    all_deputies = [];
+    const weekDays = getCurrentWeekDates().map((date) => fmt(date));
+
+    let all_deputies = [];
     for (const deputy of section.deputies) {
+        const is_absent = deputy.absence && deputy.absence.startDate && deputy.absence.endDate &&
+            weekDays.some((day) => day >= deputy.absence.startDate && day <= deputy.absence.endDate);
+
         all_deputies.push({
             firstName: deputy.firstName,
             lastName: deputy.lastName,
-            is_absent: deputy.absence === null ? false : deputy.absence,
+            is_absent: is_absent,
         });
     }
 
     return all_deputies;
 }
 
-const startWeek = "Sunday";
-const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+function getCurrentWeekDates(length = 8) {
+    let inputElements = document.querySelectorAll("input[data-fr-date='date']");
+    let inputElement = inputElements[0];
+    if (!inputElement) {
+        console.error("Start date element not found.");
+        return [];
+    }
+    const parts = inputElement.value.trim().split('/');
+    if (parts.length !== 3) {
+        console.error("Format de date invalide.");
+        return [];
+    }
 
-function getCurrentWeekDates(length = 7) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDayIndex = DAYS.indexOf(startWeek);
-    const daysSinceStart = (today.getDay() - startDayIndex + 7) % 7;
-
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - daysSinceStart);
+    let startDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
 
     return Array.from({ length }, (_, i) => {
         const d = new Date(startDate);
@@ -138,9 +143,9 @@ async function getDeputyWeeklyStats(firstName, lastName) {
 }
 
 const PRESENCE_VALID = {
-    CORRECT: 6 * 60 * 60 * 1000, // 2h en ms
-    MOYEN: 3 * 60 * 60 * 1000, // 1h en ms
-    BAD: 1 * 60 * 1000, // 30min en ms
+    CORRECT: 6 * 60 * 60 * 1000, // 6 hours in milliseconds
+    MOYEN: 3 * 60 * 60 * 1000, // 3 hours in milliseconds
+    BAD: 1 * 60 * 1000, // 1 hour in milliseconds
     NEVER: 0,
 }
 
@@ -154,11 +159,6 @@ function getPresenceStatus(ms) {
     } else {
         return "INEXISTANT";
     }
-}
-
-function isWriteRHS() {
-    const h3 = document.querySelector("h3[class='sc-hIcDrS fVclQs']");
-    return h3 ? h3.textContent.trim().toLowerCase() == "période du rapport" : false;
 }
 
 const STATUS_TO_TITLE = {
@@ -177,7 +177,8 @@ function getRows() {
     const rows = new Map();
     document.querySelectorAll('button[title="CORRECTE"]').forEach((btn) => {
         const row = btn.parentElement.parentElement;
-        const name = row.querySelector("span")?.textContent;
+        const nameSpan = row.querySelector("span");
+        const name = nameSpan ? nameSpan.textContent : null;
         if (name) rows.set(norm(name), row);
     });
     return rows;
@@ -210,13 +211,42 @@ async function fillPresence(btn) {
 
         for (const d of deputies) {
             const stats = await getDeputyWeeklyStats(d.firstName, d.lastName);
-            const status = d.is_absent ? "ABSENT" : getPresenceStatus(stats.totalMs);
+            let status = getPresenceStatus(stats.totalMs);
+            if (status === "INEXISTANT" && d.is_absent) {
+                status = "ABSENT";
+            }
             const row = findRow(rows, d.firstName, d.lastName);
             if (!row) {
                 console.warn(`Ligne introuvable : ${d.firstName} ${d.lastName}`);
                 continue;
             }
             clickStatus(row, status);
+
+            const nameSpan = row.querySelector("span");
+            if (nameSpan) {
+                let badge = nameSpan.parentNode.querySelector(".time-badge");
+                if (!badge) {
+                    badge = document.createElement("span");
+                    badge.className = "time-badge";
+                    badge.style.cssText = "margin-left: 8px; font-size: 0.9em; color: #9aa4b2;";
+                    nameSpan.parentNode.appendChild(badge);
+                }
+
+                badge.textContent = `(${formatTime(stats.totalMs)})`;
+            }
+
+            if (d.is_absent) {
+                console.log(`Deputy ${d.firstName} ${d.lastName} is absent, adding absence badge.`);
+                let badge = row.querySelector(".absence-badge");
+                if (!badge) {
+                    badge = document.createElement("span");
+                    badge.className = "absence-badge";
+                    badge.style.cssText = "margin-left: 8px; font-size: 0.9em; color: #f87171;";
+                    nameSpan.parentNode.appendChild(badge);
+                }
+                badge.textContent = "(Absence justifiée)";
+            }
+
             console.log(`${d.firstName} ${d.lastName} → ${status} (${formatTime(stats.totalMs)})`);
         }
         btn.textContent = "Terminé ✔";
