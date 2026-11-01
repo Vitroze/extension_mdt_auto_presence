@@ -108,11 +108,16 @@ async function getActivityStats(firstName, lastName) {
 const fmt = (date) =>
     `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
 
-function formatTime(ms) {
+function formatTime(ms, formatSentence = false) {
     const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
+
+    if (formatSentence) {
+        return `${hours}h ${minutes}m ${seconds}s`;
+    }
+
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
@@ -215,6 +220,7 @@ async function fillPresence(btn) {
             if (status === "INEXISTANT" && d.is_absent) {
                 status = "ABSENT";
             }
+
             const row = findRow(rows, d.firstName, d.lastName);
             if (!row) {
                 console.warn(`Ligne introuvable : ${d.firstName} ${d.lastName}`);
@@ -245,6 +251,15 @@ async function fillPresence(btn) {
                     nameSpan.parentNode.appendChild(badge);
                 }
                 badge.textContent = "(Absence justifiée)";
+
+                if (status !== "ABSENT") {
+                    const textarea = row.querySelector("textarea");
+                    if (textarea) {
+                        textarea.value = `L'adjoint est en absence justifiée mais a effectué ${formatTime(stats.totalMs, true)} de présence cette semaine.`;
+                        const event = new Event("input", { bubbles: true });
+                        textarea.dispatchEvent(event);
+                    }
+                }
             }
 
             console.log(`${d.firstName} ${d.lastName} → ${status} (${formatTime(stats.totalMs)})`);
