@@ -1,5 +1,4 @@
 const URL_API = "https://mdt.gtacityrp.fr/api/hr/department-sections";
-const AUTHORIZATION_TOKEN = "Bearer eyJzdGVhbUlkIjoiNzY1NjExOTgzODkxMjM3NzYiLCJ0aW1lc3RhbXAiOjE3OTMxNTEzNzgyODUsImhhc2giOiIzYjkxODZmYWY3MzgzNzU5N2ZkM2I2ZTE5NDY3ZDJiMGI1MjFkYmRlMjVlOWMwZGEzY2VhN2ZmMDUxYjU2YjEwIn0=";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 
